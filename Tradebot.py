@@ -1,9 +1,12 @@
+#https://www.askpython.com/python/examples/stock-price-prediction-python
+
 from typing import final
 import numpy as np #setting up the project 
 import pandas as pd 
 import matplotlib.pyplot as plt 
-from keras.models import sequential 
+from keras.models import Sequential 
 from keras.layers import Dense , LSTM 
+import math
 from sklearn.preprocessing import MinMaxScaler
 
 
@@ -53,5 +56,19 @@ for i in range (60,len(train_data)):
     y_train_data.append(train_data[i,0])
 
     #converting the training x and y values to numpy arrays 
+    x_train_data1,y_train_data1 = np.array(x_train_data) , np.array(y_train_data)
 
-#https://www.askpython.com/python/examples/stock-price-prediction-python
+    #Reshaping training s nad y data to make tyhe calculations easier 
+    x_train_data2 = np.reshape(x_train_data1 , (x_train_data1.shape[0] , x_train_data1.shape[1],1))
+
+    #Building LSTM Model 
+    model = Sequential()
+    model.add(LSTM(units=50,return_sequences=True,input_shape=(x_train_data2.shape[1],1)))
+    model.add(LSTM(units=50,return_sequences=False))
+    model.add(Dense(units=25))
+    model.add(Dense(units=1))
+    
+    #Compiling the model
+    model.compile(optimizer='adam',loss='mean_squared_error')
+    model.fit(x_train_data2 , y_train_data1 , batch_size =1 , epochs =1)
+    

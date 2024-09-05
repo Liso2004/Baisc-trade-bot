@@ -1,14 +1,14 @@
 #https://www.askpython.com/python/examples/stock-price-prediction-python
 
+
 from typing import final
-import numpy as np #setting up the project 
+import numpy as np 
 import pandas as pd 
 import matplotlib.pyplot as plt 
-from keras.models import Sequential 
-from keras.layers import Dense , LSTM 
+from tensorflow.keras.models import Sequential 
+from tensorflow.keras.layers import Dense, LSTM 
 import math
 from sklearn.preprocessing import MinMaxScaler
-
 
 data = pd.read_csv("all _stock_5yr...csv")#data sheet to be used to train the model 
 data.head()
@@ -72,3 +72,36 @@ for i in range (60,len(train_data)):
     model.compile(optimizer='adam',loss='mean_squared_error')
     model.fit(x_train_data2 , y_train_data1 , batch_size =1 , epochs =1)
     
+# 1. Creating a dataset for testing
+test_data = scaled_data[Training_data_len - 60: , : ]
+x_test = []
+y_test =  dataset[Training_data_len : , : ]
+for i in range(60,len(test_data)):
+    x_test.append(test_data[i-60:i,0])
+ 
+# 2.  Convert the values into arrays for easier computation
+x_test = np.array(x_test)
+x_test = np.reshape(x_test, (x_test.shape[0],x_test.shape[1],1))
+ 
+# 3. Making predictions on the testing data
+predictions = model.predict(x_test)
+predictions = scaler.inverse_transform(predictions)
+
+rmse=np.sqrt(np.mean(((predictions- y_test)**2)))
+print(rmse)
+
+train = data[:Training_data_len]
+valid = data[Training_data_len:]
+ 
+valid['Predictions'] = predictions
+ 
+plt.title('Model')
+plt.xlabel('Date')
+plt.ylabel('Close')
+ 
+plt.plot(train['close'])
+plt.plot(valid[['close', 'Predictions']])
+ 
+plt.legend(['Train', 'Val', 'Predictions'], loc='lower right')
+ 
+plt.show()

@@ -1,107 +1,109 @@
-#https://www.askpython.com/python/examples/stock-price-prediction-python
-
-
-from typing import final
-import numpy as np 
-import pandas as pd 
-import matplotlib.pyplot as plt 
-from tensorflow.keras.models import Sequential 
-from tensorflow.keras.layers import Dense, LSTM 
-import math
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM
 from sklearn.preprocessing import MinMaxScaler
+import math
 
-data = pd.read_csv("all _stock_5yr...csv")#data sheet to be used to train the model 
-data.head()
-all_stock_names =data['name'].unique()
-print(all_stock_names) 
+# Load dataset
+data = pd.read_csv("all_stock_5yr.csv")
 
-# 1 getting the stock name 
-stock_name= input("Enter a Stock Price Name: ")
-# 2 extracting all the data having the same name as stock enterned 
-all_data = data['name']== stock_name
-# 3 putting all the rows of specific stock in a variable 
-final_data = data [all_data ]
-# 4 printing the first 5 rows of the stock data of specfic stock name 
-final_data.head()
-#plotting the data vs the close market stock price 
-final_data.plot ('data','close',color="red")
-# Extract only top 60 rows to make a little more clearer to view 
-New_data = final_data.head(60)
-#Plotting data vs the close market stock price 
-New_data.plot ('data','close',color="green")
+# Extract available stock names
+all_stock_names = data['name'].unique()
+print(all_stock_names)
 
+# Ask user for stock name
+stock_name = input("Enter a Stock Price Name: ")
+
+# Filter rows for selected stock
+final_data = data[data['name'] == stock_name]
+
+# Preview data
+print(final_data.head())
+
+# Plot full history
+final_data.plot(x='date', y='close', color="red", title="Stock Close Price")
 plt.show()
 
-#filter out the closing market price data i
+# Plot first 60 days
+New_data = final_data.head(60)
+New_data.plot(x='date', y='close', color="green", title="First 60 Days Close Price")
+plt.show()
+
+# Use only close column
 close_data = final_data.filter(['close'])
+dataset = close_data.values
 
-#convert the data into array for easy evaluation 
-dataset= close_data.values
-
-#scale/normalize the data to make all values between 0 to 1 
-scaler = MinMaxScaler(feature_range=(0, 1))
+# Scaling
+scaler = MinMaxScaler(feature_range=(0,1))
 scaled_data = scaler.fit_transform(dataset)
 
-#creating training data size : 70% of the data 
-Training_data_len = math.ceil(len(dataset)*.7)
-train_data = scaled_data[0:Training_data_len , :]
+# 70% training size
+training_data_len = math.ceil(len(dataset) * 0.7)
 
-#separating the data into X and Y data 
-x_train_data=[]
-y_train_data=[]
-for i in range (60,len(train_data)):
-    x_train_data =list(x_train_data)
-    y_train_data = list(y_train_data)
-    x_train_data.append(train_data[i-60:i,0])
-    y_train_data.append(train_data[i,0])
+train_data = scaled_data[0:training_data_len]
 
-    #converting the training x and y values to numpy arrays 
-    x_train_data1,y_train_data1 = np.array(x_train_data) , np.array(y_train_data)
+# Creating training X and Y
+x_train = []
+y_train = []
 
-    #Reshaping training s nad y data to make tyhe calculations easier 
-    x_train_data2 = np.reshape(x_train_data1 , (x_train_data1.shape[0] , x_train_data1.shape[1],1))
+for i in range(60, len(train_data)):
+    x_train.append(train_data[i-60:i, 0])
+    y_train.append(train_data[i, 0])
 
-    #Building LSTM Model 
-    model = Sequential()
-    model.add(LSTM(units=50,return_sequences=True,input_shape=(x_train_data2.shape[1],1)))
-    model.add(LSTM(units=50,return_sequences=False))
-    model.add(Dense(units=25))
-    model.add(Dense(units=1))
-    
-    #Compiling the model
-    model.compile(optimizer='adam',loss='mean_squared_error')
-    model.fit(x_train_data2 , y_train_data1 , batch_size =1 , epochs =1)
-    
-# 1. Creating a dataset for testing
-test_data = scaled_data[Training_data_len - 60: , : ]
+# Convert to numpy
+x_train, y_train = np.array(x_train), np.array(y_train)
+
+# Reshape for LSTM
+x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
+
+# Build LSTM Model
+model = Sequential()
+model.add(LSTM(50, return_sequences=True, input_shape=(x_train.shape[1], 1)))
+model.add(LSTM(50, return_sequences=False))
+model.add(Dense(25))
+model.add(Dense(1))
+
+# Compile
+model.compile(optimizer='adam', loss='mean_squared_error')
+
+# Train
+model.fit(x_train, y_train, batch_size=1, epochs=1)
+
+# ----- TEST DATA -----
+test_data = scaled_data[training_data_len - 60:]
 x_test = []
-y_test =  dataset[Training_data_len : , : ]
-for i in range(60,len(test_data)):
-    x_test.append(test_data[i-60:i,0])
- 
-# 2.  Convert the values into arrays for easier computation
+y_test = dataset[training_data_len:]
+
+for i in range(60, len(test_data)):
+    x_test.append(test_data[i-60:i, 0])
+
 x_test = np.array(x_test)
-x_test = np.reshape(x_test, (x_test.shape[0],x_test.shape[1],1))
- 
-# 3. Making predictions on the testing data
+x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
+
+# Make predictions
 predictions = model.predict(x_test)
 predictions = scaler.inverse_transform(predictions)
 
-rmse=np.sqrt(np.mean(((predictions- y_test)**2)))
-print(rmse)
+# Calculate RMSE
+rmse = np.sqrt(np.mean((predictions - y_test)**2))
+print("RMSE:", rmse)
 
-train = data[:Training_data_len]
-valid = data[Training_data_len:]
- 
-valid['Predictions'] = predictions
- 
-plt.title('Model')
-plt.xlabel('Date')
-plt.ylabel('Close')
- 
-plt.plot(train['close'])
-plt.plot(valid[['close', 'Predictions']])
- 
-plt.legend(['Train', 'Val', 'Predictions'], loc='lower right')
- 
+# ----- PLOT RESULTS -----
+train = final_data[:training_data_len]
+valid = final_data[training_data_len:]
+
+valid.loc[:, 'Predictions'] = predictions
+
+plt.figure(figsize=(14,7))
+plt.title("Model Prediction")
+plt.xlabel("Date")
+plt.ylabel("Close Price")
+
+plt.plot(train['close'], label='Train')
+plt.plot(valid['close'], label='Validation')
+plt.plot(valid['Predictions'], label='Predictions')
+
+plt.legend()
 plt.show()
